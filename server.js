@@ -45,6 +45,18 @@ app.get('/api/rooms/:code', (req, res) => {
   }
 });
 
+// REST endpoint to create or update room state
+app.post('/api/rooms', (req, res) => {
+  const { roomState } = req.body || {};
+  if (!roomState || !roomState.code) {
+    return res.status(400).json({ success: false, error: 'Invalid room state' });
+  }
+  const code = roomState.code.toUpperCase();
+  rooms[code] = roomState;
+  io.to(code).emit('room_state', rooms[code]);
+  res.json({ success: true, room: rooms[code] });
+});
+
 // Serve static frontend files if served from Render directly
 app.use(express.static(path.join(__dirname, 'dist')));
 

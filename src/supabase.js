@@ -77,18 +77,24 @@ export async function fetchRoom(roomCode) {
   const cached = localStorage.getItem(STORAGE_KEYS.LOCAL_ROOM + code);
   let state = cached ? JSON.parse(cached) : null;
 
-  try {
-    const serverUrl = getBackendUrl();
-    const res = await fetch(`${serverUrl}/api/rooms/${code}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.room) {
-        state = data.room;
-        localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(state));
+  const serverUrl = getBackendUrl();
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const res = await fetch(`${serverUrl}/api/rooms/${code}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.room) {
+          state = data.room;
+          localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(state));
+          return state;
+        }
       }
+    } catch (err) {
+      console.warn(`REST fetch room attempt ${attempt + 1} warning:`, err);
     }
-  } catch (err) {
-    console.warn('REST fetch room fallback:', err);
+    if (attempt < 2 && !state) {
+      await new Promise(r => setTimeout(r, 400));
+    }
   }
 
   return state;
@@ -115,6 +121,18 @@ export async function syncRoomState(roomState) {
   if (!socket) initSocket();
   if (socket && socket.connected) {
     socket.emit('create_room', { roomState });
+  }
+
+  // REST POST sync for bulletproof room registration
+  try {
+    const serverUrl = getBackendUrl();
+    fetch(`${serverUrl}/api/rooms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomState })
+    }).catch(err => console.warn('REST sync error:', err));
+  } catch (err) {
+    // Ignore REST errors
   }
 }
 
