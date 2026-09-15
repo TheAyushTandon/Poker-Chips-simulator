@@ -64,6 +64,59 @@ function getRankBadge(i) {
   return i < 3 ? medals[i] : '#' + (i + 1);
 }
 
+function triggerConfetti() {
+  const canvas = document.getElementById('confetti-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const particles = [];
+  const colors = ['#f5c242', '#ffe89e', '#10b981', '#3b82f6', '#ffffff'];
+
+  for (let i = 0; i < 75; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height * 0.4,
+      r: Math.random() * 6 + 4,
+      d: Math.random() * 75,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      tilt: Math.floor(Math.random() * 10) - 10,
+      tiltAngleIncremental: Math.random() * 0.07 + 0.05,
+      tiltAngle: 0
+    });
+  }
+
+  let animationFrame;
+  let startTime = Date.now();
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      ctx.beginPath();
+      ctx.lineWidth = p.r;
+      ctx.strokeStyle = p.color;
+      ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+      ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+      ctx.stroke();
+
+      p.tiltAngle += p.tiltAngleIncremental;
+      p.y += (Math.cos(p.d) + 3 + p.r / 2) / 2;
+      p.tilt = Math.sin(p.tiltAngle) * 15;
+    }
+
+    if (Date.now() - startTime < 2500) {
+      animationFrame = requestAnimationFrame(draw);
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      cancelAnimationFrame(animationFrame);
+    }
+  }
+
+  draw();
+}
+
 // Initial Bootstrapping
 async function initApp() {
   const lastCode = queryRoomCode || localStorage.getItem(LAST_ROOM_KEY) || '';
@@ -133,7 +186,7 @@ function renderLobbyHTML() {
         <div class="logo">♠</div>
         <div>
           <h1>Teen Patti Chips</h1>
-          <p>Real-time Virtual Chips & Turn Tracker</p>
+          <p>Monte Carlo VIP Edition</p>
         </div>
       </div>
       <div class="pill ${isConfigured ? 'live' : ''}">${isConfigured ? 'SUPABASE ONLINE' : 'LOCAL / DEMO'}</div>
@@ -168,7 +221,7 @@ function renderCreateFormHTML() {
       <div class="setup-grid">
         <div>
           <div class="small muted" style="margin-bottom:6px">Table Name</div>
-          <input id="createTableName" value="Friday Night Patti" placeholder="e.g. Royal Club">
+          <input id="createTableName" value="Monte Carlo Patti" placeholder="e.g. Royal Club">
         </div>
         <div>
           <div class="small muted" style="margin-bottom:6px">Your Name (Host)</div>
@@ -229,6 +282,7 @@ function bindLobbyEvents() {
     subscribeToRoom(room.code, handleRemoteStateUpdate);
 
     sounds.playWinSound();
+    triggerConfetti();
     toast(`Room ${room.code} created!`);
     render();
   });
@@ -288,29 +342,32 @@ function renderGameHTML() {
       </div>
     </div>
 
-    <!-- POT CARD -->
-    <section class="card pot">
-      <div class="label">CURRENT POT</div>
-      <div class="value">${money(room.pot)}</div>
-      <div class="meta">
-        Base Chaal: <strong style="color:var(--gold)">${money(room.currentChaal)}</strong> • Boot: ${money(room.bootAmount)}
-      </div>
-
-      ${room.status === 'playing' ? `
-        <div class="row" style="margin-top:14px">
-          <button id="btnCollectPot" class="btn gold collect">
-            👑 Declare Winner
-          </button>
-          <button id="btnSkipTurn" class="btn" style="min-height:46px;font-size:12px" title="Skip turn if player is AFK">
-            ⏩ Skip Turn
-          </button>
+    <!-- OVAL POKER FELT TABLE -->
+    <div class="poker-table">
+      <div class="table-watermark">♠ ♥ ♦ ♣</div>
+      <div class="pot">
+        <div class="label">CURRENT POT</div>
+        <div class="value">${money(room.pot)}</div>
+        <div class="meta">
+          Base Chaal: <strong style="color:var(--gold-main)">${money(room.currentChaal)}</strong> • Boot: ${money(room.bootAmount)}
         </div>
-      ` : `
-        <button id="btnStartRound" class="btn gold collect">
-          🃏 Start Round ${room.round} (Collect Boot)
-        </button>
-      `}
-    </section>
+
+        ${room.status === 'playing' ? `
+          <div class="row" style="margin-top:16px">
+            <button id="btnCollectPot" class="btn gold collect">
+              👑 Declare Winner
+            </button>
+            <button id="btnSkipTurn" class="btn" style="min-height:50px;font-size:12px" title="Skip turn if player is AFK">
+              ⏩ Skip Turn
+            </button>
+          </div>
+        ` : `
+          <button id="btnStartRound" class="btn gold collect">
+            🃏 Start Round ${room.round} (Collect Boot)
+          </button>
+        `}
+      </div>
+    </div>
 
     <!-- SIDE SHOW REQUEST ALERT -->
     ${room.sideShowRequest ? renderSideShowBannerHTML(myId) : ''}
@@ -386,9 +443,9 @@ function renderPlayerListHTML(myId, isHost) {
           <div class="balance">${money(p.balance)} <span class="small muted">chips</span></div>
         </div>
         <div style="display:flex;gap:4px">
-          <button class="btn green" data-rebuy="${p.id}" style="min-height:34px;padding:4px 8px;font-size:11px" title="Top up 1000 chips">+💵</button>
+          <button class="btn green" data-rebuy="${p.id}" style="min-height:36px;padding:4px 8px;font-size:11px" title="Top up 1000 chips">+💵</button>
           ${isHost && !isMe ? `
-            <button class="btn danger" data-kick="${p.id}" style="min-height:34px;padding:4px 8px;font-size:11px">Kick</button>
+            <button class="btn danger" data-kick="${p.id}" style="min-height:36px;padding:4px 8px;font-size:11px">Kick</button>
           ` : ''}
         </div>
       </div>
@@ -402,7 +459,7 @@ function renderActionPanelHTML(me, myId, isMyTurn, minBet, canAllIn, activeCount
   const isBlind = me.isBlind;
 
   return `
-    <section class="card" style="${isMyTurn ? 'border-color:var(--gold);box-shadow:0 0 20px var(--gold-glow)' : ''}">
+    <section class="card" style="${isMyTurn ? 'border-color:var(--gold-main);box-shadow:0 0 25px var(--gold-glow)' : ''}">
       <h2>
         <span>Your Actions (${esc(me.name)})</span>
         <span class="small muted">${isBlind ? 'BLIND (1x)' : 'SEEN (2x)'}</span>
@@ -411,11 +468,11 @@ function renderActionPanelHTML(me, myId, isMyTurn, minBet, canAllIn, activeCount
       <div class="bet-box">
         <div class="bet-info">
           <span>Status: <strong>${isBlind ? '🙈 Blind' : '👁️ Seen'}</strong></span>
-          <span>Min Chaal: <strong style="color:var(--gold)">${money(minBet)} chips</strong></span>
+          <span>Min Chaal: <strong style="color:var(--gold-main)">${money(minBet)} chips</strong></span>
         </div>
 
         ${isBlind ? `
-          <button id="btnSeeCards" class="btn green" style="width:100%;margin-top:10px;min-height:40px;font-size:12px">
+          <button id="btnSeeCards" class="btn green" style="width:100%;margin-top:10px;min-height:44px;font-size:13px">
             👁️ See Cards (Switch to 2x Chaal)
           </button>
         ` : ''}
@@ -491,9 +548,9 @@ function renderSideShowBannerHTML(myId) {
   const isFromMe = req.fromId === myId;
 
   return `
-    <section class="card" style="border-color:var(--gold);background:#1a190f">
-      <h3 style="margin:0 0 6px;color:var(--gold)">🤝 Side Show Requested</h3>
-      <p style="font-size:13px;margin:0 0 10px;color:var(--muted)">
+    <section class="card" style="border-color:var(--gold-main);background:#1a190f">
+      <h3 style="margin:0 0 6px;color:var(--gold-main)">🤝 Side Show Requested</h3>
+      <p style="font-size:13px;margin:0 0 10px;color:var(--text-muted)">
         <strong>${esc(req.fromName)}</strong> requested a side show with <strong>${esc(req.toName)}</strong>.
       </p>
       ${isForMe ? `
@@ -569,6 +626,7 @@ function bindGameEvents() {
   document.getElementById('btnShowCards')?.addEventListener('click', () => {
     dispatchAction({ type: 'TRIGGER_SHOW', payload: { playerId: myId } });
     sounds.playWinSound();
+    triggerConfetti();
     openWinnerModal();
   });
 
@@ -662,7 +720,7 @@ function openWinnerModal() {
   modal(`
     <h3>Select Round Winner</h3>
     <p class="muted small" style="margin-bottom:14px">
-      Who should receive the current pot of <strong style="color:var(--gold)">${money(room.pot)} chips</strong>?
+      Who should receive the current pot of <strong style="color:var(--gold-main)">${money(room.pot)} chips</strong>?
     </p>
     <div class="sheet-grid">
       ${active.map(p => `
@@ -676,6 +734,7 @@ function openWinnerModal() {
     btn.addEventListener('click', () => {
       const winnerId = btn.dataset.winner;
       sounds.playWinSound();
+      triggerConfetti();
       dispatchAction({ type: 'COLLECT_WINNER', payload: { winnerId } });
       closeModal();
     });
@@ -688,8 +747,8 @@ function openQRModal() {
   const joinUrl = `${window.location.origin}${window.location.pathname}?room=${room.code}`;
 
   modal(`
-    <h3 style="text-align:center">Room Code: <span style="color:var(--gold)">${room.code}</span></h3>
-    <p style="text-align:center;font-size:12px;color:var(--muted);margin:0 0 10px">
+    <h3 style="text-align:center">Room Code: <span style="color:var(--gold-main)">${room.code}</span></h3>
+    <p style="text-align:center;font-size:12px;color:var(--text-muted);margin:0 0 10px">
       Scan with phone camera or tap share to invite friends!
     </p>
     <div class="qr-box">
@@ -745,7 +804,7 @@ function openTableSettingsModal() {
       </div>
       <button id="btnSaveTableConfig" class="btn gold">Save Table Settings</button>
 
-      <hr style="border:0;border-top:1px solid var(--line);margin:10px 0">
+      <hr style="border:0;border-top:1px solid var(--panel-glass-border);margin:10px 0">
 
       <h3>Supabase Backend URL & Key</h3>
       <div class="small muted">Plug in your Supabase project credentials for instant global real-time sync across any network!</div>

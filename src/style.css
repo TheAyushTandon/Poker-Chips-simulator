@@ -1,32 +1,33 @@
 /* ==========================================================================
-   VIP CASINO ROYALE - ULTRA PREMIUM TEEN PATTI CHIPS DESIGN SYSTEM
+   MONTE CARLO VIP CASINO - 2026 NEXT-GEN POKER TABLE & CHIPS DESIGN SYSTEM
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@600;700;800;900&display=swap');
 
 :root {
-  --bg-dark: #050706;
-  --bg-felt: radial-gradient(ellipse at 50% -10%, #172a1e 0%, #080d0a 65%, #040605 100%);
-  --panel-glass: rgba(16, 22, 18, 0.75);
-  --panel-glass-border: rgba(231, 189, 85, 0.22);
-  --panel-solid: #0d130f;
+  --bg-dark: #040605;
+  --felt-base: #0c1c13;
+  --felt-gradient: radial-gradient(ellipse at 50% 35%, #183b27 0%, #0c1e14 55%, #050b07 100%);
   
-  /* Gold Palette */
-  --gold-light: #ffebad;
-  --gold-main: #f3c34e;
-  --gold-dark: #b8861d;
-  --gold-gradient: linear-gradient(135deg, #fff0bc 0%, #f3c34e 45%, #b58215 100%);
-  --gold-glow: rgba(243, 195, 78, 0.4);
+  --panel-glass: rgba(14, 20, 16, 0.82);
+  --panel-glass-border: rgba(243, 195, 78, 0.25);
+  
+  /* Gold Accents */
+  --gold-light: #fff3c4;
+  --gold-main: #f5c242;
+  --gold-dark: #b88314;
+  --gold-gradient: linear-gradient(135deg, #fff5d6 0%, #f5c242 40%, #b88314 100%);
+  --gold-glow: rgba(245, 194, 66, 0.45);
 
-  /* Neon Accents */
-  --emerald: #2fe076;
-  --emerald-glow: rgba(47, 224, 118, 0.35);
-  --ruby: #ff5268;
-  --ruby-glow: rgba(255, 82, 104, 0.35);
-  --violet: #9b8cff;
+  /* Accents & Chips */
+  --emerald: #10b981;
+  --ruby: #ef4444;
+  --sapphire: #3b82f6;
+  --amethyst: #8b5cf6;
+  --onyx: #1f2937;
   
-  --text-primary: #f8faf6;
-  --text-muted: #8e9b90;
+  --text-primary: #f9fafb;
+  --text-muted: #9ca3af;
 }
 
 * {
@@ -39,7 +40,7 @@
 html, body {
   min-height: 100%;
   background: var(--bg-dark);
-  background-image: var(--bg-felt);
+  background-image: var(--felt-gradient);
   background-attachment: fixed;
   color: var(--text-primary);
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -48,6 +49,7 @@ html, body {
 
 body {
   padding-bottom: env(safe-area-inset-bottom);
+  overflow-x: hidden;
 }
 
 button, input, select {
@@ -57,29 +59,29 @@ button, input, select {
 button {
   border: 0;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.22 cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
 }
 
 button:active {
-  transform: scale(0.96) !important;
+  transform: scale(0.95) !important;
 }
 
-/* Container */
+/* Main Container */
 .app {
-  width: min(660px, 100%);
+  width: min(680px, 100%);
   margin: 0 auto;
-  padding: 18px 14px 125px;
+  padding: 16px 12px 130px;
 }
 
 /* ----------------------------------------------------
-   HEADER & VIP BRANDING
+   HEADER & SUIT WATERMARKS
    ---------------------------------------------------- */
 .top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .brand {
@@ -89,34 +91,34 @@ button:active {
 }
 
 .logo {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
   border-radius: 16px;
   background: var(--gold-gradient);
   display: grid;
   place-items: center;
-  color: #120e04;
-  font-size: 26px;
+  color: #0d0a03;
+  font-size: 28px;
   font-weight: 900;
-  box-shadow: 0 8px 25px rgba(243, 195, 78, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.6);
-  border: 1px solid #ffe699;
+  box-shadow: 0 8px 25px rgba(245, 194, 66, 0.4), inset 0 2px 4px rgba(255, 255, 255, 0.7);
+  border: 1px solid #ffebad;
 }
 
 .brand h1 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Cinzel', 'Outfit', serif;
   font-size: 22px;
   font-weight: 900;
-  letter-spacing: -0.02em;
-  background: linear-gradient(180deg, #ffffff 0%, #dce4dd 100%);
+  letter-spacing: 0.02em;
+  background: linear-gradient(180deg, #ffffff 0%, #d1d5db 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
 .brand p {
-  margin-top: 1px;
   color: var(--text-muted);
   font-size: 11px;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
+  margin-top: 1px;
 }
 
 .pill {
@@ -124,19 +126,19 @@ button:active {
   font-weight: 800;
   color: var(--gold-main);
   border: 1px solid var(--panel-glass-border);
-  background: rgba(22, 18, 9, 0.85);
+  background: rgba(18, 14, 6, 0.85);
   backdrop-filter: blur(12px);
-  padding: 7px 13px;
+  padding: 7px 14px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
 .pill.live {
-  border-color: rgba(47, 224, 118, 0.3);
-  background: rgba(10, 31, 18, 0.85);
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(6, 26, 17, 0.85);
   color: var(--emerald);
 }
 
@@ -146,7 +148,7 @@ button:active {
   height: 8px;
   border-radius: 50%;
   background: var(--emerald);
-  box-shadow: 0 0 10px var(--emerald);
+  box-shadow: 0 0 12px var(--emerald);
   animation: pulse-emerald 1.6s infinite;
 }
 
@@ -156,17 +158,77 @@ button:active {
 }
 
 /* ----------------------------------------------------
-   CARDS & VIP GLASSMORPHISM
+   REALISTIC OVAL POKER TABLE
+   ---------------------------------------------------- */
+.poker-table {
+  background: radial-gradient(ellipse at 50% 40%, #1e452e 0%, #0d2116 65%, #06110b 100%);
+  border: 4px solid var(--gold-dark);
+  outline: 2px solid rgba(245, 194, 66, 0.3);
+  border-radius: 120px;
+  padding: 24px 16px;
+  margin: 16px 0;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), inset 0 0 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(245, 194, 66, 0.15);
+  position: relative;
+}
+
+.table-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 110px;
+  color: rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+  font-family: 'Cinzel', serif;
+}
+
+/* POT DISPLAY CONTAINER */
+.pot {
+  padding: 20px 16px;
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.pot .label {
+  font-family: 'Cinzel', sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: var(--gold-main);
+  font-weight: 900;
+  text-shadow: 0 0 10px var(--gold-glow);
+}
+
+.pot .value {
+  font-family: 'Cinzel', 'Outfit', serif;
+  font-size: 54px;
+  line-height: 1;
+  font-weight: 900;
+  background: linear-gradient(180deg, #ffffff 0%, #ffe89e 55%, #f5c242 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 8px 0;
+  filter: drop-shadow(0 4px 20px rgba(245, 194, 66, 0.5));
+}
+
+.pot .meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ----------------------------------------------------
+   GLASS CARDS
    ---------------------------------------------------- */
 .card {
   background: var(--panel-glass);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--panel-glass-border);
-  border-radius: 22px;
+  border-radius: 24px;
   padding: 18px;
   margin: 14px 0;
-  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
 h2 {
@@ -175,7 +237,7 @@ h2 {
   margin-bottom: 14px;
   color: var(--gold-main);
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -187,8 +249,8 @@ h2 {
 
 input {
   width: 100%;
-  background: rgba(6, 10, 7, 0.9);
-  border: 1px solid rgba(243, 195, 78, 0.2);
+  background: rgba(5, 9, 6, 0.95);
+  border: 1px solid rgba(245, 194, 66, 0.22);
   color: #fff;
   padding: 14px 16px;
   border-radius: 14px;
@@ -199,7 +261,7 @@ input {
 
 input:focus {
   border-color: var(--gold-main);
-  box-shadow: 0 0 15px var(--gold-glow);
+  box-shadow: 0 0 18px var(--gold-glow);
 }
 
 .row {
@@ -216,123 +278,61 @@ input:focus {
    ---------------------------------------------------- */
 .btn {
   min-height: 50px;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 12px 18px;
   font-weight: 800;
   font-size: 14px;
-  background: #1c2620;
+  background: #18221b;
   color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
 }
 
 .btn:hover {
-  background: #25332a;
+  background: #223026;
 }
 
 .btn.gold {
   background: var(--gold-gradient);
-  color: #120e04;
-  border: 1px solid #ffe08a;
-  box-shadow: 0 6px 20px rgba(243, 195, 78, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  color: #0f0b03;
+  border: 1px solid #ffe99e;
+  box-shadow: 0 6px 20px rgba(245, 194, 66, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.6);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .btn.gold:hover {
   filter: brightness(1.1);
-  box-shadow: 0 8px 25px rgba(243, 195, 78, 0.5);
+  box-shadow: 0 8px 28px rgba(245, 194, 66, 0.6);
 }
 
 .btn.danger {
-  background: linear-gradient(135deg, #44181f, #2a0e13);
-  color: #ff9ebb;
-  border: 1px solid rgba(255, 82, 104, 0.3);
-  box-shadow: 0 4px 15px rgba(255, 82, 104, 0.2);
-}
-
-.btn.danger:hover {
-  background: linear-gradient(135deg, #591f29, #361218);
+  background: linear-gradient(135deg, #4d1720, #2c0b11);
+  color: #ffa1b8;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
 }
 
 .btn.green {
-  background: linear-gradient(135deg, #103b22, #082112);
+  background: linear-gradient(135deg, #0e3d23, #061f11);
   color: var(--emerald);
-  border: 1px solid rgba(47, 224, 118, 0.3);
-  box-shadow: 0 4px 15px rgba(47, 224, 118, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.25);
 }
 
 .btn:disabled {
   opacity: 0.35;
   cursor: not-allowed;
-  filter: grayscale(0.5);
+  filter: grayscale(0.6);
   box-shadow: none !important;
   transform: none !important;
 }
 
 /* ----------------------------------------------------
-   VIP POKER POT DISPLAY
-   ---------------------------------------------------- */
-.pot {
-  padding: 26px 20px;
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  background: radial-gradient(circle at 50% 30%, #1e3626 0%, #0f1c13 60%, #09120c 100%);
-  border: 2px solid rgba(243, 195, 78, 0.35);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), inset 0 0 30px rgba(243, 195, 78, 0.15);
-}
-
-.pot:before {
-  content: "";
-  position: absolute;
-  inset: -100px;
-  background: radial-gradient(circle, rgba(243, 195, 78, 0.2), transparent 60%);
-  pointer-events: none;
-  animation: pot-glow 4s ease-in-out infinite alternate;
-}
-
-@keyframes pot-glow {
-  from { opacity: 0.5; }
-  to { opacity: 1; }
-}
-
-.pot .label {
-  font-family: 'Outfit', sans-serif;
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  color: var(--gold-main);
-  font-weight: 900;
-  text-shadow: 0 0 10px var(--gold-glow);
-}
-
-.pot .value {
-  font-family: 'Cinzel', 'Outfit', serif;
-  font-size: 56px;
-  line-height: 1;
-  font-weight: 900;
-  background: linear-gradient(180deg, #ffffff 0%, #ffe08a 60%, #e5aa26 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin: 10px 0;
-  filter: drop-shadow(0 4px 20px rgba(243, 195, 78, 0.5));
-}
-
-.pot .meta {
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-.pot .collect {
-  margin-top: 16px;
-  width: 100%;
-}
-
-/* ----------------------------------------------------
-   PLAYER CARDS & TURN HALO
+   SEATED PLAYERS & TURN HALO
    ---------------------------------------------------- */
 .player-list {
   display: grid;
@@ -344,65 +344,65 @@ input:focus {
   align-items: center;
   gap: 14px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(10, 15, 12, 0.7);
-  border-radius: 18px;
-  padding: 13px;
+  background: rgba(9, 14, 11, 0.75);
+  border-radius: 20px;
+  padding: 14px;
   position: relative;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .player.is-turn {
   border-color: var(--gold-main);
-  background: linear-gradient(90deg, rgba(46, 37, 16, 0.8), rgba(15, 22, 17, 0.8));
-  box-shadow: 0 0 25px var(--gold-glow), inset 0 0 15px rgba(243, 195, 78, 0.2);
-  transform: scale(1.01);
+  background: linear-gradient(90deg, rgba(54, 43, 17, 0.85), rgba(14, 21, 16, 0.85));
+  box-shadow: 0 0 30px var(--gold-glow), inset 0 0 15px rgba(245, 194, 66, 0.25);
+  transform: scale(1.015);
 }
 
 .player.is-folded {
   opacity: 0.4;
-  filter: grayscale(0.8);
+  filter: grayscale(0.85);
 }
 
 .turn-badge {
   position: absolute;
-  top: -9px;
-  right: 14px;
+  top: -10px;
+  right: 16px;
   background: var(--gold-gradient);
-  color: #120e04;
+  color: #0f0b03;
   font-size: 9px;
   font-weight: 900;
-  padding: 3px 10px;
+  padding: 3px 11px;
   border-radius: 999px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.7);
   animation: turn-pulse 1.2s infinite alternate ease-in-out;
 }
 
 @keyframes turn-pulse {
   from { transform: translateY(0); box-shadow: 0 2px 8px var(--gold-glow); }
-  to { transform: translateY(-3px); box-shadow: 0 6px 16px var(--gold-glow); }
+  to { transform: translateY(-4px); box-shadow: 0 8px 20px var(--gold-glow); }
 }
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #243529, #131c16);
+  background: linear-gradient(135deg, #27382d, #121a15);
   font-weight: 900;
-  font-size: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  font-size: 17px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
   flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
 .player.is-turn .avatar {
   border-color: var(--gold-main);
-  background: linear-gradient(135deg, #473919, #231b09);
+  background: linear-gradient(135deg, #52421c, #261e0b);
   color: var(--gold-light);
-  box-shadow: 0 0 15px var(--gold-glow);
+  box-shadow: 0 0 18px var(--gold-glow);
 }
 
 .pinfo {
@@ -428,27 +428,27 @@ input:focus {
 .tag {
   font-size: 9px;
   font-weight: 900;
-  padding: 2px 7px;
-  border-radius: 6px;
+  padding: 3px 8px;
+  border-radius: 7px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.tag.dealer { background: #3d2e11; color: var(--gold-main); border: 1px solid #73541b; }
-.tag.blind { background: #12331f; color: var(--emerald); border: 1px solid #1e5e39; }
-.tag.seen { background: #262145; color: var(--violet); border: 1px solid #4a3e87; }
-.tag.folded { background: #331418; color: var(--ruby); border: 1px solid #63222b; }
+.tag.dealer { background: #453413; color: var(--gold-main); border: 1px solid #825e1c; }
+.tag.blind { background: #113621; color: var(--emerald); border: 1px solid #1c663d; }
+.tag.seen { background: #28214a; color: var(--amethyst); border: 1px solid #504094; }
+.tag.folded { background: #38151a; color: var(--ruby); border: 1px solid #6e242d; }
 
 .balance {
   color: var(--gold-main);
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 900;
   margin-top: 3px;
   font-family: 'Outfit', sans-serif;
 }
 
 /* ----------------------------------------------------
-   3D POKER CHIPS STYLING
+   AUTHENTIC 3D CASINO POKER CHIPS
    ---------------------------------------------------- */
 .chip-row {
   display: grid;
@@ -460,35 +460,41 @@ input:focus {
 .chip {
   aspect-ratio: 1;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #2a352c, #131a15);
+  background: radial-gradient(circle at 35% 35%, #2d382f, #121814);
   color: #fff;
-  border: 4px dashed rgba(255, 255, 255, 0.3);
+  border: 4px dashed rgba(255, 255, 255, 0.35);
   display: grid;
   place-items: center;
   font-weight: 900;
   font-size: 14px;
   font-family: 'Outfit', sans-serif;
-  box-shadow: 0 6px 0 #060907, 0 10px 20px rgba(0,0,0,0.6);
+  box-shadow: 0 6px 0 #050806, 0 12px 25px rgba(0,0,0,0.7);
   position: relative;
-  transition: all 0.15s ease;
+  transition: all 0.18s ease;
 }
+
+/* COLOR TIER STYLING FOR CHIPS */
+.chip[data-chip="5"] { background: radial-gradient(circle at 35% 35%, #856117, #3b2a07); border-color: var(--gold-main); }
+.chip[data-chip="10"] { background: radial-gradient(circle at 35% 35%, #374151, #111827); border-color: #9ca3af; }
+.chip[data-chip="20"] { background: radial-gradient(circle at 35% 35%, #1e40af, #1e1b4b); border-color: var(--sapphire); }
+.chip[data-chip="50"] { background: radial-gradient(circle at 35% 35%, #065f46, #022c22); border-color: var(--emerald); }
+.chip[data-chip="100"] { background: radial-gradient(circle at 35% 35%, #991b1b, #450a0a); border-color: var(--ruby); }
+.chip[data-chip="200"] { background: radial-gradient(circle at 35% 35%, #5b21b6, #2e1065); border-color: var(--amethyst); }
+.chip[data-chip="500"] { background: radial-gradient(circle at 35% 35%, #b45309, #451a03); border-color: #f59e0b; }
 
 .chip:before {
   content: "";
   position: absolute;
   inset: 4px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   pointer-events: none;
 }
 
 .chip.active {
-  background: radial-gradient(circle at 35% 35%, #594720, #2b210c);
+  transform: translateY(-5px) scale(1.05);
+  box-shadow: 0 0 25px var(--gold-glow), 0 9px 0 #050806;
   border-style: solid;
-  border-color: var(--gold-main);
-  color: var(--gold-light);
-  transform: translateY(-4px);
-  box-shadow: 0 0 20px var(--gold-glow), 0 8px 0 #060907;
 }
 
 .quick-bets {
@@ -499,18 +505,18 @@ input:focus {
 }
 
 .quick-bets button {
-  background: rgba(22, 31, 25, 0.8);
+  background: rgba(20, 29, 23, 0.85);
   color: #fff;
-  border-radius: 12px;
+  border-radius: 13px;
   padding: 12px 6px;
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .quick-bets button:hover {
-  background: rgba(35, 48, 39, 0.9);
-  border-color: rgba(243, 195, 78, 0.3);
+  background: rgba(32, 45, 36, 0.95);
+  border-color: rgba(245, 194, 66, 0.35);
 }
 
 /* ----------------------------------------------------
@@ -525,9 +531,9 @@ input:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(10, 15, 12, 0.6);
+  background: rgba(9, 14, 11, 0.65);
   border-radius: 14px;
-  padding: 12px 16px;
+  padding: 13px 16px;
   font-size: 14px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
@@ -535,7 +541,7 @@ input:focus {
 .rank strong {
   color: var(--gold-main);
   font-family: 'Outfit', sans-serif;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .history {
@@ -571,14 +577,14 @@ input:focus {
   right: 0;
   bottom: 0;
   padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
-  background: rgba(5, 8, 6, 0.88);
-  border-top: 1px solid rgba(243, 195, 78, 0.2);
+  background: rgba(4, 7, 5, 0.9);
+  border-top: 1px solid rgba(245, 194, 66, 0.25);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
 
 .bottom-inner {
-  width: min(660px, 100%);
+  width: min(680px, 100%);
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -592,26 +598,33 @@ input:focus {
 }
 
 /* ----------------------------------------------------
-   MODALS & SHEET DIALOGS
+   MODALS & CONFETTI CANVAS
    ---------------------------------------------------- */
 .hidden { display: none !important; }
+
+#confetti-canvas {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 200;
+}
 
 .toast {
   position: fixed;
   z-index: 100;
   left: 50%;
-  bottom: 96px;
+  bottom: 98px;
   transform: translate(-50%, 20px);
   background: #ffffff;
-  color: #050706;
+  color: #040605;
   border-radius: 999px;
-  padding: 12px 22px;
+  padding: 12px 24px;
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 900;
   opacity: 0;
   pointer-events: none;
   transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.8);
   white-space: nowrap;
 }
 
@@ -624,7 +637,7 @@ input:focus {
   position: fixed;
   z-index: 50;
   inset: 0;
-  background: rgba(0, 0, 0, 0.82);
+  background: rgba(0, 0, 0, 0.84);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -632,19 +645,19 @@ input:focus {
 }
 
 .sheet {
-  width: min(660px, 100%);
-  background: rgba(15, 21, 17, 0.96);
+  width: min(680px, 100%);
+  background: rgba(14, 20, 16, 0.97);
   border: 1px solid var(--panel-glass-border);
   border-bottom: 0;
   border-radius: 28px 28px 0 0;
   padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
-  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.85);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.88);
   max-height: 88vh;
   overflow-y: auto;
 }
 
 .sheet h3 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Cinzel', 'Outfit', serif;
   margin-bottom: 16px;
   font-size: 20px;
 }
@@ -682,7 +695,7 @@ input:focus {
 
 @media (min-width: 700px) {
   .app {
-    padding-top: 30px;
+    padding-top: 32px;
   }
   .bottom {
     position: static;
