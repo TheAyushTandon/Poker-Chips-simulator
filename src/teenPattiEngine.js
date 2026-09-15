@@ -93,16 +93,18 @@ export function reduceRoomAction(room, action) {
 
   switch (action.type) {
     case 'JOIN_PLAYER': {
-      const { name, playerId } = action.payload;
-      const existing = state.players.find(p => p.id === playerId || p.name.toLowerCase() === name.toLowerCase());
+      const { name, playerId } = action.payload || {};
+      if (!name || !playerId) return state;
+      const cleanName = String(name).trim();
+      const existing = state.players.find(p => p.id === playerId || (p.name && p.name.toLowerCase() === cleanName.toLowerCase()));
       if (existing) {
         existing.id = playerId; // Reconnect
-        existing.name = name.trim();
+        existing.name = cleanName;
         return state;
       }
       state.players.push({
         id: playerId,
-        name: name.trim(),
+        name: cleanName,
         balance: state.startingChips,
         start: state.startingChips,
         isBlind: true,
@@ -114,7 +116,7 @@ export function reduceRoomAction(room, action) {
         joinedAt: Date.now()
       });
       state.history.unshift({
-        text: `${name} joined the table`,
+        text: `${cleanName} joined the table`,
         time: formatTime()
       });
       return state;

@@ -14,6 +14,7 @@ let socket = null;
 let currentRoomCode = null;
 let activeCallback = null;
 let broadcastChannel = null;
+let activeRoomState = null;
 
 export function getBackendUrl() {
   return import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_SUPABASE_URL || localStorage.getItem(STORAGE_KEYS.SERVER_URL) || DEFAULT_BACKEND_URL;
@@ -37,13 +38,17 @@ export function initSocket() {
   try {
     socket = io(serverUrl, {
       transports: ['polling', 'websocket'],
-      reconnectionAttempts: 10,
+      reconnectionAttempts: 15,
       reconnectionDelay: 1000
     });
 
     socket.on('connect', () => {
       console.log('⚡ Connected to Socket.io Realtime Backend:', serverUrl);
-      if (currentRoomCode && activeCallback) {
+      // Auto re-register or rejoin room upon connection/reconnection
+      if (activeRoomState && activeRoomState.code) {
+        socket.emit('create_room', { roomState: activeRoomState });
+      } else if (currentRoomCode) {
+        socket.emit('join_room', { roomCode: currentRoomCode });
         socket.emit('fetch_room', { roomCode: currentRoomCode });
       }
     });
@@ -51,6 +56,7 @@ export function initSocket() {
     socket.on('room_state', (roomState) => {
       if (!roomState || !roomState.code) return;
       const code = roomState.code.toUpperCase();
+      activeRoomState = roomState;
       localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(roomState));
 
       if (activeCallback) {
@@ -68,42 +74,92 @@ export function initSocket() {
   return socket;
 }
 
-// Fetch room state from server (or LocalStorage fallback)
+// Fetch room state from server (Socket.io acknowledgement primary, REST fallback)
 export async function fetchRoom(roomCode) {
   const code = (roomCode || '').toUpperCase();
   if (!code) return null;
 
-  // Check local cache first for instant render
+  // Check local cache first
   const cached = localStorage.getItem(STORAGE_KEYS.LOCAL_ROOM + code);
-  let state = cached ? JSON.parse(cached) : null;
+  let localState = cached ? JSON.parse(cached) : null;
 
-  const serverUrl = getBackendUrl();
-  for (let attempt = 0; attempt < 3; attempt++) {
+  if (!socket) initSocket();
+
+  // 1. Fetch via Socket.io acknowledgement (instant, zero CORS restrictions)
+  const socketFetch = new Promise((resolve) => {
+    if (!socket) return resolve(null);
+
+    const askSocket = () => {
+      try {
+        socket.emit('fetch_room', { roomCode: code }, (res) => {
+          if (res && res.success && res.room) {
+            resolve(res.room);
+          } else {
+            resolve(null);
+          }
+        });
+      } catch (err) {
+        resolve(null);
+      }
+    };
+
+    if (socket.connected) {
+      askSocket();
+    } else {
+      const onConn = () => {
+        socket.off('connect', onConn);
+        askSocket();
+      };
+      socket.once('connect', onConn);
+      setTimeout(() => {
+        socket.off('connect', onConn);
+        resolve(null);
+      }, 2500);
+    }
+  });
+
+  // 2. Parallel REST fetch fallback
+  const restFetch = (async () => {
     try {
+      const serverUrl = getBackendUrl();
       const res = await fetch(`${serverUrl}/api/rooms/${code}`);
       if (res.ok) {
         const data = await res.json();
-        if (data && data.room) {
-          state = data.room;
-          localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(state));
-          return state;
-        }
+        if (data && data.room) return data.room;
       }
-    } catch (err) {
-      console.warn(`REST fetch room attempt ${attempt + 1} warning:`, err);
+    } catch (e) {
+      // Ignore network/CORS errors silently
     }
-    if (attempt < 2 && !state) {
-      await new Promise(r => setTimeout(r, 400));
-    }
+    return null;
+  })();
+
+  const socketResult = await Promise.race([
+    socketFetch,
+    new Promise(r => setTimeout(() => r(null), 2500))
+  ]);
+
+  if (socketResult) {
+    activeRoomState = socketResult;
+    localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(socketResult));
+    return socketResult;
   }
 
-  return state;
+  const restResult = await restFetch;
+  if (restResult) {
+    activeRoomState = restResult;
+    localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(restResult));
+    return restResult;
+  }
+
+  return localState;
 }
 
 // Save & Broadcast updated room state
 export async function syncRoomState(roomState) {
   if (!roomState || !roomState.code) return;
   const code = roomState.code.toUpperCase();
+  activeRoomState = roomState;
+  currentRoomCode = code;
 
   // Save to Local Storage always as instant backup
   localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(roomState));
@@ -117,23 +173,21 @@ export async function syncRoomState(roomState) {
     broadcastChannel.postMessage({ type: 'ROOM_UPDATE', state: roomState });
   }
 
-  // Socket.io Real-Time Broadcast to Render Server
+  // Socket.io Real-Time Broadcast to Render Server (Always emit - Socket.io queues if connecting)
   if (!socket) initSocket();
-  if (socket && socket.connected) {
+  if (socket) {
     socket.emit('create_room', { roomState });
   }
 
-  // REST POST sync for bulletproof room registration
+  // REST POST sync as backup
   try {
     const serverUrl = getBackendUrl();
     fetch(`${serverUrl}/api/rooms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ roomState })
-    }).catch(err => console.warn('REST sync error:', err));
-  } catch (err) {
-    // Ignore REST errors
-  }
+    }).catch(() => {});
+  } catch (err) {}
 }
 
 // Send specific action to server reducer

@@ -294,21 +294,40 @@ function bindLobbyEvents() {
     if (!code) return toast('Please enter a Room Code');
     if (!name) return toast('Please enter your name');
 
-    const fetched = await fetchRoom(code);
-    if (!fetched) {
-      return toast('Room not found. Check code!');
+    const btn = document.getElementById('btnJoinRoom');
+    const oldText = btn ? btn.textContent : 'Enter Table';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Connecting to Table...';
     }
 
-    room = fetched;
-    const myId = getMyPlayerId();
-    dispatchAction({ type: 'JOIN_PLAYER', payload: { name, playerId: myId } });
+    try {
+      const fetched = await fetchRoom(code);
+      if (!fetched) {
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = oldText;
+        }
+        return toast('Room not found. Check code!');
+      }
 
-    localStorage.setItem(LAST_ROOM_KEY, code);
-    subscribeToRoom(code, handleRemoteStateUpdate);
+      room = fetched;
+      const myId = getMyPlayerId();
+      dispatchAction({ type: 'JOIN_PLAYER', payload: { name, playerId: myId } });
 
-    sounds.playTurnSound();
-    toast(`Joined table ${code}`);
-    render();
+      localStorage.setItem(LAST_ROOM_KEY, code);
+      subscribeToRoom(code, handleRemoteStateUpdate);
+
+      sounds.playTurnSound();
+      toast(`Joined table ${code}`);
+      render();
+    } catch (err) {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = oldText;
+      }
+      toast('Could not join table. Please try again.');
+    }
   });
 
   document.getElementById('btnSupabaseSetup')?.addEventListener('click', openSupabaseSettingsModal);
