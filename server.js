@@ -16,24 +16,25 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 
-// Enable CORS for Vercel frontend & any origin
-app.use(cors({ origin: '*', credentials: true }));
-app.use(express.json());
-
-// Explicit CORS headers middleware for all REST API responses & OPTIONS preflight
+// Dynamic CORS middleware for Express REST API & OPTIONS preflight
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin || '*';
+  res.header('Access-Control-Allow-Origin', origin);
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
   if (req.method === 'OPTIONS') {
-    return res.sendStatus(200);
+    return res.sendStatus(204);
   }
   next();
 });
 
+app.use(cors({ origin: true, credentials: true }));
+app.use(express.json());
+
 const io = new Server(httpServer, {
   cors: {
-    origin: '*',
+    origin: true,
     methods: ['GET', 'POST', 'OPTIONS'],
     credentials: true
   },
