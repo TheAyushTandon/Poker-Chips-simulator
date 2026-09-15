@@ -36,7 +36,7 @@ export function initSocket() {
 
   try {
     socket = io(serverUrl, {
-      transports: ['websocket', 'polling'],
+      transports: ['polling', 'websocket'],
       reconnectionAttempts: 10,
       reconnectionDelay: 1000
     });
