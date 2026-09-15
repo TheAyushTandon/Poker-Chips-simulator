@@ -74,6 +74,12 @@ app.post('/api/rooms', (req, res) => {
 
 // Serve static frontend files if served from Render directly
 app.use(express.static(path.join(__dirname, 'dist')));
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api') || req.path.startsWith('/socket.io')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
 
 // Socket.io Real-Time Event Handlers
 io.on('connection', (socket) => {
