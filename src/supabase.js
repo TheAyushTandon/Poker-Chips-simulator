@@ -16,7 +16,7 @@ let activeCallback = null;
 let broadcastChannel = null;
 
 export function getBackendUrl() {
-  return import.meta.env.VITE_BACKEND_URL || localStorage.getItem(STORAGE_KEYS.SERVER_URL) || DEFAULT_BACKEND_URL;
+  return import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_SUPABASE_URL || localStorage.getItem(STORAGE_KEYS.SERVER_URL) || DEFAULT_BACKEND_URL;
 }
 
 export function saveBackendUrl(url) {
