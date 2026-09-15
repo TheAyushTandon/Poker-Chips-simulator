@@ -59,7 +59,7 @@ export function formatTime(ts = Date.now()) {
 // Get active (non-folded) players
 export function getActivePlayers(room) {
   if (!room || !room.players) return [];
-  return room.players.filter(p => !p.isFolded && p.balance >= 0);
+  return room.players.filter(p => !p.isFolded);
 }
 
 // Get next active player index starting after a given index
@@ -76,13 +76,15 @@ export function getNextActiveTurnIndex(room, fromIndex) {
 
 // Get required bet amount based on player's Blind/Seen status and base chaal
 export function calculateRequiredBet(room, playerId) {
-  const player = room.players.find(p => p.id === playerId);
-  if (!player) return { minBet: 0, isBlind: true };
+  const player = room?.players?.find(p => p.id === playerId);
+  if (!player) return { minBet: 0, isBlind: true, canAllIn: false };
 
   const baseChaal = room.currentChaal || room.bootAmount || 10;
   // Blind player bets 1x baseChaal; Seen player bets 2x baseChaal
   const minBet = player.isBlind ? baseChaal : baseChaal * 2;
-  return { minBet, isBlind: player.isBlind, baseChaal };
+  const canAllIn = player.balance > 0 && player.balance < minBet;
+
+  return { minBet, isBlind: player.isBlind, baseChaal, canAllIn };
 }
 
 // Engine Actions Reducer (Returns new mutated room state)
@@ -95,6 +97,7 @@ export function reduceRoomAction(room, action) {
       const existing = state.players.find(p => p.id === playerId || p.name.toLowerCase() === name.toLowerCase());
       if (existing) {
         existing.id = playerId; // Reconnect
+        existing.name = name.trim();
         return state;
       }
       state.players.push({
@@ -107,7 +110,7 @@ export function reduceRoomAction(room, action) {
         betThisRound: 0,
         totalBet: 0,
         wins: 0,
-        isHost: false,
+        isHost: state.players.length === 0,
         joinedAt: Date.now()
       });
       state.history.unshift({
@@ -121,14 +124,29 @@ export function reduceRoomAction(room, action) {
       const { playerId } = action.payload;
       const p = state.players.find(x => x.id === playerId);
       if (!p) return state;
+
+      const wasHost = p.isHost;
       state.players = state.players.filter(x => x.id !== playerId);
+
+      // Reassign host if host left
+      if (wasHost && state.players.length > 0) {
+        state.players[0].isHost = true;
+        state.history.unshift({
+          text: `👑 Host left. ${state.players[0].name} is now the table Host`,
+          time: formatTime()
+        });
+      }
+
       state.history.unshift({
         text: `${p.name} left the room`,
         time: formatTime()
       });
+
       // Adjust turn index if needed
       if (state.currentTurnIndex >= state.players.length) {
         state.currentTurnIndex = 0;
+      } else {
+        state.currentTurnIndex = getNextActiveTurnIndex(state, state.currentTurnIndex);
       }
       return state;
     }
@@ -145,7 +163,7 @@ export function reduceRoomAction(room, action) {
         p.isFolded = false;
         p.isBlind = true; // All players start Blind by default
         p.betThisRound = 0;
-        
+
         const boot = Math.min(p.balance, state.bootAmount);
         p.balance -= boot;
         p.betThisRound += boot;
@@ -184,23 +202,44 @@ export function reduceRoomAction(room, action) {
       const p = state.players.find(x => x.id === playerId);
       if (!p || p.isFolded) return state;
 
-      if (p.balance < amount) return state;
+      const actualAmount = Math.min(p.balance, Math.max(1, amount));
+      if (actualAmount <= 0) return state;
 
-      p.balance -= amount;
-      p.betThisRound += amount;
-      p.totalBet += amount;
-      state.pot += amount;
+      p.balance -= actualAmount;
+      p.betThisRound += actualAmount;
+      p.totalBet += actualAmount;
+      state.pot += actualAmount;
 
       if (newBaseChaal && newBaseChaal > state.currentChaal) {
         state.currentChaal = newBaseChaal;
       }
 
       state.history.unshift({
-        text: `${p.name} (${p.isBlind ? 'Blind' : 'Seen'}) bet ${amount} chips`,
+        text: `${p.name} (${p.isBlind ? 'Blind' : 'Seen'}) bet ${actualAmount} chips`,
         time: formatTime()
       });
 
       // Advance turn
+      state.currentTurnIndex = getNextActiveTurnIndex(state, state.currentTurnIndex);
+      return state;
+    }
+
+    case 'ALL_IN': {
+      const { playerId } = action.payload;
+      const p = state.players.find(x => x.id === playerId);
+      if (!p || p.isFolded || p.balance <= 0) return state;
+
+      const allInAmount = p.balance;
+      p.balance = 0;
+      p.betThisRound += allInAmount;
+      p.totalBet += allInAmount;
+      state.pot += allInAmount;
+
+      state.history.unshift({
+        text: `🔥 ${p.name} went ALL-IN with ${allInAmount} chips!`,
+        time: formatTime()
+      });
+
       state.currentTurnIndex = getNextActiveTurnIndex(state, state.currentTurnIndex);
       return state;
     }
@@ -238,6 +277,18 @@ export function reduceRoomAction(room, action) {
       return state;
     }
 
+    case 'SKIP_TURN': {
+      const p = state.players[state.currentTurnIndex];
+      if (p) {
+        state.history.unshift({
+          text: `⏩ ${p.name}'s turn was skipped`,
+          time: formatTime()
+        });
+      }
+      state.currentTurnIndex = getNextActiveTurnIndex(state, state.currentTurnIndex);
+      return state;
+    }
+
     case 'REQUEST_SIDESHOW': {
       const { fromId } = action.payload;
       const fromPlayer = state.players.find(p => p.id === fromId);
@@ -267,23 +318,69 @@ export function reduceRoomAction(room, action) {
     }
 
     case 'RESPOND_SIDESHOW': {
-      const { accepted } = action.payload;
+      const { accepted, loserId } = action.payload;
       if (!state.sideShowRequest) return state;
 
       const { fromName, toName } = state.sideShowRequest;
 
       if (accepted) {
         state.history.unshift({
-          text: `✅ ${toName} accepted Side Show from ${fromName}. Compare cards privately!`,
+          text: `✅ ${toName} accepted Side Show from ${fromName}`,
           time: formatTime()
         });
+
+        if (loserId) {
+          const loser = state.players.find(p => p.id === loserId);
+          if (loser) {
+            loser.isFolded = true;
+            state.history.unshift({
+              text: `📉 ${loser.name} lost Side Show and folded!`,
+              time: formatTime()
+            });
+
+            // Check if 1 player left
+            const active = getActivePlayers(state);
+            if (active.length === 1) {
+              const winner = active[0];
+              winner.balance += state.pot;
+              winner.wins += 1;
+              state.history.unshift({
+                text: `🏆 ${winner.name} won ${state.pot} chips!`,
+                time: formatTime()
+              });
+              state.pot = 0;
+              state.status = 'round_over';
+              state.dealerIndex = (state.dealerIndex + 1) % state.players.length;
+              state.round += 1;
+            }
+          }
+        }
       } else {
         state.history.unshift({
-          text: `❌ ${toName} declined Side Show from ${fromName}.`,
+          text: `❌ ${toName} declined Side Show from ${fromName}`,
           time: formatTime()
         });
       }
       state.sideShowRequest = null;
+      return state;
+    }
+
+    case 'TRIGGER_SHOW': {
+      const { playerId } = action.payload;
+      const p = state.players.find(x => x.id === playerId);
+      if (!p || p.isFolded) return state;
+
+      const { minBet } = calculateRequiredBet(state, playerId);
+      const fee = Math.min(p.balance, minBet);
+      p.balance -= fee;
+      p.betThisRound += fee;
+      p.totalBet += fee;
+      state.pot += fee;
+
+      state.history.unshift({
+        text: `👀 ${p.name} called SHOW! (${fee} chips fee paid to pot)`,
+        time: formatTime()
+      });
       return state;
     }
 
@@ -305,6 +402,20 @@ export function reduceRoomAction(room, action) {
       state.status = 'round_over';
       state.dealerIndex = (state.dealerIndex + 1) % state.players.length;
       state.round += 1;
+      return state;
+    }
+
+    case 'REBUY_CHIPS': {
+      const { playerId, amount } = action.payload;
+      const p = state.players.find(x => x.id === playerId);
+      if (!p) return state;
+
+      const rebuyVal = Number(amount) || 1000;
+      p.balance += rebuyVal;
+      state.history.unshift({
+        text: `💵 ${p.name} topped up +${rebuyVal} chips`,
+        time: formatTime()
+      });
       return state;
     }
 

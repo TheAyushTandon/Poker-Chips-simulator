@@ -124,7 +124,6 @@ function render() {
 // ----------------------------------------------------
 function renderLobbyHTML() {
   const { isConfigured } = getSupabaseConfig();
-
   const isCreate = activeTab === 'create';
   const isJoin = activeTab === 'join';
 
@@ -222,7 +221,7 @@ function bindLobbyEvents() {
 
     const initial = createInitialRoomState({ tableName, startingChips, bootAmount, hostName });
     const myId = getMyPlayerId();
-    initial.players[0].id = myId; // Ensure host gets persistent ID
+    initial.players[0].id = myId;
 
     room = initial;
     localStorage.setItem(LAST_ROOM_KEY, room.code);
@@ -272,7 +271,7 @@ function renderGameHTML() {
   const isHost = me.isHost || room.players[0]?.id === myId;
   const activePlayers = getActivePlayers(room);
 
-  const { minBet } = calculateRequiredBet(room, myId);
+  const { minBet, canAllIn } = calculateRequiredBet(room, myId);
 
   return `
     <div class="top">
@@ -298,9 +297,14 @@ function renderGameHTML() {
       </div>
 
       ${room.status === 'playing' ? `
-        <button id="btnCollectPot" class="btn gold collect" ${room.pot <= 0 ? 'disabled' : ''}>
-          👑 Collect Pot / Declare Winner
-        </button>
+        <div class="row" style="margin-top:14px">
+          <button id="btnCollectPot" class="btn gold collect">
+            👑 Declare Winner
+          </button>
+          <button id="btnSkipTurn" class="btn" style="min-height:46px;font-size:12px" title="Skip turn if player is AFK">
+            ⏩ Skip Turn
+          </button>
+        </div>
       ` : `
         <button id="btnStartRound" class="btn gold collect">
           🃏 Start Round ${room.round} (Collect Boot)
@@ -323,7 +327,7 @@ function renderGameHTML() {
     </section>
 
     <!-- BETTING & ACTION PANEL -->
-    ${room.status === 'playing' ? renderActionPanelHTML(me, myId, isMyTurn, minBet, activePlayers.length) : ''}
+    ${room.status === 'playing' ? renderActionPanelHTML(me, myId, isMyTurn, minBet, canAllIn, activePlayers.length) : ''}
 
     <!-- LEADERBOARD -->
     <section class="card">
@@ -375,21 +379,24 @@ function renderPlayerListHTML(myId, isHost) {
         <div class="avatar">${initials(p.name)}</div>
         <div class="pinfo">
           <div class="pname-row">
-            <div class="pname">${esc(p.name)} ${isMe ? '(You)' : ''}</div>
+            <div class="pname">${esc(p.name)} ${isMe ? '(You)' : ''} ${p.isHost ? '👑' : ''}</div>
             ${isDealer ? '<span class="tag dealer">Dealer</span>' : ''}
             ${tagHTML}
           </div>
           <div class="balance">${money(p.balance)} <span class="small muted">chips</span></div>
         </div>
-        ${isHost && !isMe ? `
-          <button class="btn danger" data-kick="${p.id}" style="min-height:34px;padding:4px 8px;font-size:11px">Kick</button>
-        ` : ''}
+        <div style="display:flex;gap:4px">
+          <button class="btn green" data-rebuy="${p.id}" style="min-height:34px;padding:4px 8px;font-size:11px" title="Top up 1000 chips">+💵</button>
+          ${isHost && !isMe ? `
+            <button class="btn danger" data-kick="${p.id}" style="min-height:34px;padding:4px 8px;font-size:11px">Kick</button>
+          ` : ''}
+        </div>
       </div>
     `;
   }).join('');
 }
 
-function renderActionPanelHTML(me, myId, isMyTurn, minBet, activeCount) {
+function renderActionPanelHTML(me, myId, isMyTurn, minBet, canAllIn, activeCount) {
   const denoms = room.denominations || [5, 10, 20, 50, 100];
   const isFolded = me.isFolded;
   const isBlind = me.isBlind;
@@ -404,7 +411,7 @@ function renderActionPanelHTML(me, myId, isMyTurn, minBet, activeCount) {
       <div class="bet-box">
         <div class="bet-info">
           <span>Status: <strong>${isBlind ? '🙈 Blind' : '👁️ Seen'}</strong></span>
-          <span>Min Chaal Required: <strong style="color:var(--gold)">${money(minBet)} chips</strong></span>
+          <span>Min Chaal: <strong style="color:var(--gold)">${money(minBet)} chips</strong></span>
         </div>
 
         ${isBlind ? `
@@ -431,14 +438,26 @@ function renderActionPanelHTML(me, myId, isMyTurn, minBet, activeCount) {
         <button id="btnFold" class="btn danger" ${isFolded ? 'disabled' : ''}>
           ❌ Pack / Fold
         </button>
-        
-        <button id="btnSideShow" class="btn" ${isFolded || activeCount < 3 ? 'disabled' : ''}>
-          🤝 Side Show
-        </button>
 
-        <button id="btnBet" class="btn gold" ${isFolded || !isMyTurn || me.balance < minBet ? 'disabled' : ''} style="flex:2">
-          💰 Chaal • ${money(selectedChip < minBet ? minBet : selectedChip)} chips
-        </button>
+        ${activeCount === 2 ? `
+          <button id="btnShowCards" class="btn gold" ${isFolded || !isMyTurn ? 'disabled' : ''}>
+            👀 Show Cards (${money(minBet)})
+          </button>
+        ` : `
+          <button id="btnSideShow" class="btn" ${isFolded || activeCount < 3 ? 'disabled' : ''}>
+            🤝 Side Show
+          </button>
+        `}
+
+        ${canAllIn ? `
+          <button id="btnAllIn" class="btn danger" ${isFolded || !isMyTurn ? 'disabled' : ''} style="flex:2">
+            🔥 ALL-IN (${money(me.balance)})
+          </button>
+        ` : `
+          <button id="btnBet" class="btn gold" ${isFolded || !isMyTurn || me.balance < minBet ? 'disabled' : ''} style="flex:2">
+            💰 Chaal • ${money(selectedChip < minBet ? minBet : selectedChip)}
+          </button>
+        `}
       </div>
     </section>
   `;
@@ -469,6 +488,7 @@ function renderHistoryHTML() {
 function renderSideShowBannerHTML(myId) {
   const req = room.sideShowRequest;
   const isForMe = req.toId === myId;
+  const isFromMe = req.fromId === myId;
 
   return `
     <section class="card" style="border-color:var(--gold);background:#1a190f">
@@ -481,9 +501,15 @@ function renderSideShowBannerHTML(myId) {
           <button id="btnAcceptSideShow" class="btn gold">✅ Accept Side Show</button>
           <button id="btnDeclineSideShow" class="btn danger">❌ Decline</button>
         </div>
+      ` : (isFromMe || isForMe ? `
+        <div class="small muted">Waiting for response... Choose who lost hand if accepted:</div>
+        <div class="row" style="margin-top:6px">
+          <button class="btn danger" data-sideshow-loser="${req.fromId}">${esc(req.fromName)} Lost Hand</button>
+          <button class="btn danger" data-sideshow-loser="${req.toId}">${esc(req.toName)} Lost Hand</button>
+        </div>
       ` : `
         <div class="small muted">Waiting for ${esc(req.toName)} to respond...</div>
-      `}
+      `)}
     </section>
   `;
 }
@@ -507,6 +533,11 @@ function bindGameEvents() {
 
   document.getElementById('btnCollectPot')?.addEventListener('click', openWinnerModal);
 
+  document.getElementById('btnSkipTurn')?.addEventListener('click', () => {
+    dispatchAction({ type: 'SKIP_TURN' });
+    toast('Turn skipped!');
+  });
+
   document.querySelectorAll('[data-chip]').forEach(btn => {
     btn.addEventListener('click', () => {
       selectedChip = Number(btn.dataset.chip);
@@ -527,6 +558,18 @@ function bindGameEvents() {
     const { minBet } = calculateRequiredBet(room, myId);
     const amount = Math.max(selectedChip, minBet);
     placeBet(amount);
+  });
+
+  document.getElementById('btnAllIn')?.addEventListener('click', () => {
+    sounds.playChipSound();
+    dispatchAction({ type: 'ALL_IN', payload: { playerId: myId } });
+    toast('ALL-IN placed!');
+  });
+
+  document.getElementById('btnShowCards')?.addEventListener('click', () => {
+    dispatchAction({ type: 'TRIGGER_SHOW', payload: { playerId: myId } });
+    sounds.playWinSound();
+    openWinnerModal();
   });
 
   document.getElementById('btnSeeCards')?.addEventListener('click', () => {
@@ -551,6 +594,22 @@ function bindGameEvents() {
 
   document.getElementById('btnDeclineSideShow')?.addEventListener('click', () => {
     dispatchAction({ type: 'RESPOND_SIDESHOW', payload: { accepted: false } });
+  });
+
+  document.querySelectorAll('[data-sideshow-loser]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const loserId = btn.dataset.sideshowLoser;
+      dispatchAction({ type: 'RESPOND_SIDESHOW', payload: { accepted: true, loserId } });
+      toast('Side show resolved');
+    });
+  });
+
+  document.querySelectorAll('[data-rebuy]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pid = btn.dataset.rebuy;
+      dispatchAction({ type: 'REBUY_CHIPS', payload: { playerId: pid, amount: 1000 } });
+      toast('Topped up 1000 chips!');
+    });
   });
 
   document.querySelectorAll('[data-kick]').forEach(btn => {
