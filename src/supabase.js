@@ -1,78 +1,97 @@
-// Supabase Client & Realtime Sync Engine for Teen Patti Chips
+// Real-time Socket.io Sync Engine (Render Backend + Vercel Frontend)
 
-import { createClient } from '@supabase/supabase-js';
+import { io } from 'socket.io-client';
 
 const STORAGE_KEYS = {
-  URL: 'tp_supabase_url',
-  KEY: 'tp_supabase_anon_key',
+  SERVER_URL: 'tp_socket_server_url',
   LOCAL_ROOM: 'tp_local_room_'
 };
 
-let supabaseClient = null;
-let activeChannel = null;
+// Default Backend URL on Render
+const DEFAULT_BACKEND_URL = 'https://poker-chips-simulator.onrender.com';
+
+let socket = null;
+let currentRoomCode = null;
+let activeCallback = null;
 let broadcastChannel = null;
 
-export function getSupabaseConfig() {
-  const url = import.meta.env.VITE_SUPABASE_URL || localStorage.getItem(STORAGE_KEYS.URL) || '';
-  const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || localStorage.getItem(STORAGE_KEYS.KEY) || '';
-  return { url, anonKey, isConfigured: Boolean(url && anonKey) };
+export function getBackendUrl() {
+  return import.meta.env.VITE_BACKEND_URL || localStorage.getItem(STORAGE_KEYS.SERVER_URL) || DEFAULT_BACKEND_URL;
 }
 
-export function saveSupabaseConfig(url, anonKey) {
-  if (url) localStorage.setItem(STORAGE_KEYS.URL, url.trim());
-  else localStorage.removeItem(STORAGE_KEYS.URL);
-
-  if (anonKey) localStorage.setItem(STORAGE_KEYS.KEY, anonKey.trim());
-  else localStorage.removeItem(STORAGE_KEYS.KEY);
-
-  initSupabase();
-}
-
-export function initSupabase() {
-  const { url, anonKey, isConfigured } = getSupabaseConfig();
-  if (isConfigured) {
-    try {
-      supabaseClient = createClient(url, anonKey, {
-        realtime: { params: { eventsPerSecond: 10 } }
-      });
-      return supabaseClient;
-    } catch (err) {
-      console.warn('Supabase initialization failed:', err);
-      supabaseClient = null;
-    }
+export function saveBackendUrl(url) {
+  if (url) {
+    localStorage.setItem(STORAGE_KEYS.SERVER_URL, url.trim());
   } else {
-    supabaseClient = null;
+    localStorage.removeItem(STORAGE_KEYS.SERVER_URL);
   }
-  return null;
+  initSocket();
 }
 
-// Fetch room state from Supabase (or LocalStorage fallback)
-export async function fetchRoom(roomCode) {
-  const code = roomCode.toUpperCase();
-  const { isConfigured } = getSupabaseConfig();
-
-  if (supabaseClient && isConfigured) {
-    try {
-      const { data, error } = await supabaseClient
-        .from('rooms')
-        .select('state')
-        .eq('code', code)
-        .single();
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Supabase fetch room error:', error);
-      }
-      if (data && data.state) {
-        return data.state;
-      }
-    } catch (err) {
-      console.warn('Supabase fetch exception:', err);
-    }
+export function initSocket() {
+  const serverUrl = getBackendUrl();
+  if (socket) {
+    socket.disconnect();
   }
 
-  // Fallback to local storage
-  const localData = localStorage.getItem(STORAGE_KEYS.LOCAL_ROOM + code);
-  return localData ? JSON.parse(localData) : null;
+  try {
+    socket = io(serverUrl, {
+      transports: ['websocket', 'polling'],
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000
+    });
+
+    socket.on('connect', () => {
+      console.log('⚡ Connected to Socket.io Realtime Backend:', serverUrl);
+      if (currentRoomCode && activeCallback) {
+        socket.emit('fetch_room', { roomCode: currentRoomCode });
+      }
+    });
+
+    socket.on('room_state', (roomState) => {
+      if (!roomState || !roomState.code) return;
+      const code = roomState.code.toUpperCase();
+      localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(roomState));
+
+      if (activeCallback) {
+        activeCallback(roomState);
+      }
+    });
+
+    socket.on('connect_error', (err) => {
+      console.warn('Socket.io connection warning:', err.message);
+    });
+  } catch (err) {
+    console.warn('Socket initialization exception:', err);
+  }
+
+  return socket;
+}
+
+// Fetch room state from server (or LocalStorage fallback)
+export async function fetchRoom(roomCode) {
+  const code = (roomCode || '').toUpperCase();
+  if (!code) return null;
+
+  // Check local cache first for instant render
+  const cached = localStorage.getItem(STORAGE_KEYS.LOCAL_ROOM + code);
+  let state = cached ? JSON.parse(cached) : null;
+
+  try {
+    const serverUrl = getBackendUrl();
+    const res = await fetch(`${serverUrl}/api/rooms/${code}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.room) {
+        state = data.room;
+        localStorage.setItem(STORAGE_KEYS.LOCAL_ROOM + code, JSON.stringify(state));
+      }
+    }
+  } catch (err) {
+    console.warn('REST fetch room fallback:', err);
+  }
+
+  return state;
 }
 
 // Save & Broadcast updated room state
@@ -92,41 +111,29 @@ export async function syncRoomState(roomState) {
     broadcastChannel.postMessage({ type: 'ROOM_UPDATE', state: roomState });
   }
 
-  const { isConfigured } = getSupabaseConfig();
-  if (supabaseClient && isConfigured) {
-    try {
-      // Upsert room state in Supabase DB
-      const { error } = await supabaseClient
-        .from('rooms')
-        .upsert({ code, state: roomState }, { onConflict: 'code' });
+  // Socket.io Real-Time Broadcast to Render Server
+  if (!socket) initSocket();
+  if (socket && socket.connected) {
+    socket.emit('create_room', { roomState });
+  }
+}
 
-      if (error) {
-        console.error('Supabase sync error:', error);
-      }
+// Send specific action to server reducer
+export function dispatchSocketAction(roomCode, action) {
+  if (!roomCode || !action) return;
+  const code = roomCode.toUpperCase();
 
-      // Also send realtime broadcast payload
-      if (activeChannel) {
-        activeChannel.send({
-          type: 'broadcast',
-          event: 'state_update',
-          payload: roomState
-        });
-      }
-    } catch (err) {
-      console.warn('Supabase sync exception:', err);
-    }
+  if (!socket) initSocket();
+  if (socket) {
+    socket.emit('dispatch_action', { roomCode: code, action });
   }
 }
 
 // Subscribe to real-time changes for a room code
 export function subscribeToRoom(roomCode, onStateUpdate) {
-  const code = roomCode.toUpperCase();
-
-  // Cleanup old channel
-  if (activeChannel) {
-    activeChannel.unsubscribe();
-    activeChannel = null;
-  }
+  const code = (roomCode || '').toUpperCase();
+  currentRoomCode = code;
+  activeCallback = onStateUpdate;
 
   // Local Tab Sync via BroadcastChannel
   if (window.BroadcastChannel) {
@@ -139,39 +146,30 @@ export function subscribeToRoom(roomCode, onStateUpdate) {
     };
   }
 
-  const { isConfigured } = getSupabaseConfig();
-  if (supabaseClient && isConfigured) {
-    // 1. Listen to Realtime Broadcast channel
-    activeChannel = supabaseClient.channel(`tp_channel_${code}`, {
-      config: { broadcast: { self: false } }
-    });
-
-    activeChannel
-      .on('broadcast', { event: 'state_update' }, (payload) => {
-        if (payload && payload.payload) {
-          onStateUpdate(payload.payload);
-        }
-      })
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: 'rooms',
-        filter: `code=eq.${code}`
-      }, (payload) => {
-        if (payload && payload.new && payload.new.state) {
-          onStateUpdate(payload.new.state);
-        }
-      })
-      .subscribe((status) => {
-        console.log(`Supabase Realtime status for room ${code}:`, status);
-      });
+  if (!socket) initSocket();
+  if (socket) {
+    socket.emit('join_room', { roomCode: code });
+    socket.emit('fetch_room', { roomCode: code });
   }
 
-  // Initial fetch
+  // Initial local fetch
   fetchRoom(code).then(state => {
     if (state) onStateUpdate(state);
   });
 }
 
-// Initialize Supabase on import
-initSupabase();
+// Legacy compatibility stubs for UI settings modal
+export function getSupabaseConfig() {
+  return {
+    url: getBackendUrl(),
+    anonKey: 'Socket.io Server',
+    isConfigured: true
+  };
+}
+
+export function saveSupabaseConfig(url) {
+  saveBackendUrl(url);
+}
+
+// Initialize socket connection on load
+initSocket();
